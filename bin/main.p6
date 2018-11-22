@@ -18,7 +18,16 @@ my ScaleVec $octotonic = scalevec(0, 2, 3, 5, 6, 8, 9, 11, 12);
 my ScaleVec $whole-tone = scalevec(0, 2, 4, 6, 8, 10, 12);
 my ScaleVec $whole-tone-b = scalevec(-1, 1, 3, 5, 7, 9, 11);
 
-my ScaleVec $tonic = scalevec 0, 2, 4, 7;
+# chords
+my ScaleVec $tonic          = scalevec 0, 2, 4, 7;
+my ScaleVec $submedient     = scalevec 5, 7, 9, 12;
+my ScaleVec $subdominant    = scalevec 3, 5, 7, 10;
+my ScaleVec $dominant       = scalevec 4, 6, 8, 11;
+my ScaleVec $dominant7th    = scalevec 4, 6, 8, 10, 11;
+
+# tempo
+my $lento   = scalevec(0, 1.2);
+my $vivace  = scalevec(0, 0.45);
 
 my VGM::Soundtrack::OscSender $out .= new;
 
@@ -67,7 +76,7 @@ my @phrase-queue;
 my ScaleVec @phrase-chords;
 
 # Run loop
-my $epoch = now;
+my $step-delta = now;
 for 1..* {
 
     # update
@@ -78,13 +87,13 @@ for 1..* {
 
         @phrase-chords =
             $tonic,
-            (scalevec 5, 7, 9, 12),
-            (scalevec 3, 5, 7, 10),
-            (scalevec 4, 6, 8, 11),
-            (scalevec 5, 7, 9, 12),
-            (scalevec 3, 5, 7, 10),
-            (scalevec 4, 6, 8, 11),
-            (scalevec 4, 6, 8, 10, 11);
+            $submedient,
+            $subdominant,
+            $dominant,
+            $submedient,
+            $subdominant,
+            $dominant,
+            $dominant7th;
 
         for 0..^$steps -> $step {
             # standard step behaviour
@@ -92,8 +101,8 @@ for 1..* {
                 say "creating step $_ for delta $delta";
                 $state.pitch-structure.pop;
                 $state.pitch-structure.push: @phrase-chords.shift;
+                my $struct = $state.fitted-pitch-contour($step / $steps);
                 await Promise.at($delta).then: {
-                    my $struct = $state.fitted-pitch-contour($step / $steps);
                     say $struct;
                     $out.send-note('track-0', ($_+60).Int, 100, 1000) for $struct.values
                 }
@@ -102,11 +111,21 @@ for 1..* {
         }
     }
 
-    # Execute next behaviour
-    if ⚛$is-playing == 1 {
-        @phrase-queue.shift.($state, $epoch + $_);
+    given ⚛$game-state {
+        when 0 {
+            $state.rhythmn-structure[0] = $lento
+        }
+        when 1 {
+            $state.rhythmn-structure[0] = $vivace
+        }
     }
-    await Promise.at($epoch + $_);
+
+    # Execute next behaviour
+    $step-delta = $step-delta + $state.rhythmn-structure.head.interval(0, 1);
+    if ⚛$is-playing == 1 {
+        @phrase-queue.shift.($state, $step-delta);
+    }
+    await Promise.at($step-delta);
 
     #last if $_ > 14
 }
