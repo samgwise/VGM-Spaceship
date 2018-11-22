@@ -39,6 +39,9 @@ our class State {
     has Int $.dynamic is rw = 80;
     has Int $.dynamic-target is rw = 80;
 
+    has Bool $.combat is rw = False;
+    has Bool $.cruise is rw = False;
+
     # select a pair of pitch bounds from a context given a transition
     method pitch-contour($t) {
         order-pair (bézier $t, @!curve-upper), (bézier $t, @!curve-lower)
@@ -97,14 +100,21 @@ our class OscSender {
     has @.targets = ('127.0.0.1', '5635'), ;
 
     #! send a note message to targets
-    method send-note(Str $name, Int $note, Int $velocity, Int $duration) {
+    method send-note(Str $name, Int $note, Int $velocity, Int $duration, Instant :$at) {
         my Net::OSC::Message $msg .= new(
             :path("/play-out/$name/note")
             :args($note, $velocity, $duration)
             :is64bit(False)
         );
 
-        $!socket.write-to($_[0], $_[1], $msg.package) for @!targets
+        if $at {
+            Promise.at($at).then: {
+                $!socket.write-to($_[0], $_[1], $msg.package) for @!targets
+            }
+        }
+        else {
+            $!socket.write-to($_[0], $_[1], $msg.package) for @!targets
+        }
     }
 }
 
@@ -126,4 +136,21 @@ our sub scalevec(+@vector) is export {
 # Calculate the interval class of two values
 our sub interval-class(Numeric $a, Numeric $b --> Numeric) is export {
     (abs $b - $a) % 12
+}
+
+# Drum sequence
+our sub drum-pattern($step, $duration, $state) is export {
+    gather given $step % 8 {
+        when $_ mod 2 == 1 {
+            # kick
+            take (38, $duration, $state.dynamic-live($step), 0);
+            # snare
+            take (46, $duration, ($state.dynamic-live($step) / 2).Int, $duration - ($duration / 2)) if $_ mod 4 == 3 ;
+            # upbeat kick
+            take (36, $duration, ($state.dynamic-live($step) / 4).Int, $duration - ($duration / 4)) if $_ == 7;
+        }
+        default {
+            take (36, $duration, $state.dynamic-live($step), 0)
+        }
+    }
 }

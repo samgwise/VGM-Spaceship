@@ -81,13 +81,17 @@ my ScaleVec @phrase-chords;
 
 # Run loop
 my $step-delta = now;
+my $step = 0;
 for 1..* {
 
     # update
 
     # Queue up another phrase length of behaviours
     unless @phrase-queue {
-        $state.pitch-structure[1] = ($octotonic, $pentatonic, $whole-tone, $whole-tone-b).pick;
+        $step = 0;
+        # Were we in cruise or combat when this phrase was queued
+        my $combat-running = $state.combat;
+        my $cruise-running = $state.cruise;
 
         @phrase-chords =
             $tonic,
@@ -107,10 +111,16 @@ for 1..* {
                 $state.pitch-structure.pop;
                 $state.pitch-structure.push: @phrase-chords.shift;
                 my $struct = $state.fitted-pitch-contour($step / $steps);
-                my $block-duration = $state.rhythmn-structure.head.interval(0, 1);
+                my $block-duration = $state.rhythmn-structure.head.interval($step, $step + 1);
+
                 await Promise.at($delta).then: {
                     say $struct;
-                    $out.send-note('track-0', ($_+60).Int, $state.dynamic-live($step), ($block-duration * 1000).Int) for $struct.values
+                    $out.send-note('track-0', ($_+60).Int, $state.dynamic-live($step), ($block-duration * 1000).Int) for $struct.values;
+
+                    # queued up while in combat and only during combat
+                    if $combat-running and $state.combat {
+                        $out.send-note('track-2', $_[0], ($_[1] * 1000).Int, $_[2], :at($delta + $_[3])) for drum-pattern($step, $block-duration, $state)
+                    }
                 }
                 #say "Step $_ with state { $state.gist } and curve {  }"
             }
@@ -120,20 +130,28 @@ for 1..* {
     given ⚛$game-state {
         when 0 {
             $state.rhythmn-structure[0] = $lento;
+            $state.pitch-structure[1] = $pentatonic;
             $state.dynamic-target = $soft;
+            $state.combat = False;
+            $state.cruise = True;
         }
         when 1 {
             $state.rhythmn-structure[0] = $vivace;
+            $state.pitch-structure[1] = $octotonic;
             $state.dynamic-target = $loud;
+            $state.combat = True;
+            $state.cruise = False;
         }
     }
 
     # Execute next behaviour
-    $step-delta = $step-delta + $state.rhythmn-structure.head.interval(0, 1);
+    $step-delta = $step-delta + $state.rhythmn-structure.head.interval($step, $step + 1);
     if ⚛$is-playing == 1 {
         @phrase-queue.shift.($state, $step-delta);
     }
     await Promise.at($step-delta);
+
+    $step++;
 
     #last if $_ > 14
 }
