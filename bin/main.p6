@@ -1,10 +1,11 @@
 #! /usr/bin/env perl6
 use v6.c;
 
-unit sub MAIN(Int $steps = 8);
+unit sub MAIN(Int :$steps = 8, Str :$scene!);
 use ScaleVec;
 use Math::Curves;
 use Reaper::Control;
+use VGM::Scene::Events;
 use VGM::Soundtrack;
 
 my $perfect     = Set(0, 7, 12);
@@ -23,19 +24,33 @@ my VGM::Soundtrack::OscSender $out .= new;
 
 # Map events
 my atomicint $is-playing = 0;
+my atomicint $game-state = 0;
+
 my $listener = reaper-listener(:host<127.0.0.1>, :port(9000));
 start react whenever $listener.reaper-events {
-  when Reaper::Control::Event::Play {
+    when Reaper::Control::Event::Play {
       put 'Playing';
       $is-playing ⚛= 1;
-  }
-  when Reaper::Control::Event::Stop {
+    }
+    when Reaper::Control::Event::Stop {
       put 'stopped';
       $is-playing ⚛= 0;
-  }
-  when Reaper::Control::Event::PlayTime {
-      put "seconds: { .seconds }\nsamples: { .samples }\nbeats: { .beats }"
-  }
+    }
+}
+
+my $scene-config = load-scene-config($scene);
+start react whenever sync-scene-events($listener, $scene-config) {
+    given .<path> {
+        when '/combat/start' {
+            put 'Start combat';
+            $game-state ⚛= 1;
+        }
+        when '/combat/stop' {
+            put 'Stop combat';
+            $game-state ⚛= 0;
+        }
+        default { put "Skipped { .perl }" }
+    }
 }
 
 # Define state record
