@@ -29,6 +29,10 @@ my ScaleVec $dominant7th    = scalevec 4, 6, 8, 10, 11;
 my $lento   = scalevec(0, 1.2);
 my $vivace  = scalevec(0, 0.45);
 
+# dynamics
+my $soft = 40; # piano
+my $loud = 105; # forte
+
 my VGM::Soundtrack::OscSender $out .= new;
 
 # Map events
@@ -98,13 +102,15 @@ for 1..* {
         for 0..^$steps -> $step {
             # standard step behaviour
             @phrase-queue.push: -> $state, $delta {
-                say "creating step $_ for delta $delta";
+                say "creating step $step for delta $delta, dynamic: { $state.dynamic }";
+                $state.dynamic-update;
                 $state.pitch-structure.pop;
                 $state.pitch-structure.push: @phrase-chords.shift;
                 my $struct = $state.fitted-pitch-contour($step / $steps);
+                my $block-duration = $state.rhythmn-structure.head.interval(0, 1);
                 await Promise.at($delta).then: {
                     say $struct;
-                    $out.send-note('track-0', ($_+60).Int, 100, 1000) for $struct.values
+                    $out.send-note('track-0', ($_+60).Int, $state.dynamic-live($step), ($block-duration * 1000).Int) for $struct.values
                 }
                 #say "Step $_ with state { $state.gist } and curve {  }"
             }
@@ -113,10 +119,12 @@ for 1..* {
 
     given ⚛$game-state {
         when 0 {
-            $state.rhythmn-structure[0] = $lento
+            $state.rhythmn-structure[0] = $lento;
+            $state.dynamic-target = $soft;
         }
         when 1 {
-            $state.rhythmn-structure[0] = $vivace
+            $state.rhythmn-structure[0] = $vivace;
+            $state.dynamic-target = $loud;
         }
     }
 

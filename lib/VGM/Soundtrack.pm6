@@ -36,6 +36,9 @@ our class State {
     has ScaleVec @.pitch-structure   = scalevec(0, 1);
     has ScaleVec @.rhythmn-structure = scalevec(0, 1);
 
+    has Int $.dynamic is rw = 80;
+    has Int $.dynamic-target is rw = 80;
+
     # select a pair of pitch bounds from a context given a transition
     method pitch-contour($t) {
         order-pair (bézier $t, @!curve-upper), (bézier $t, @!curve-lower)
@@ -68,6 +71,22 @@ our class State {
                 self.pitch-contour($t)
             ).map( *.round )
         )
+    }
+
+    #! Emulate a more lively dynamic behaviour
+    method dynamic-live(Int $step, Int $subdivision = 2 --> Int ) {
+        return $!dynamic + ($!dynamic / 20).rand.round if $step % $subdivision == 0;
+        $!dynamic + ($!dynamic / 20).rand.round;
+    }
+
+    #! update our dynamic towards the current target
+    method dynamic-update(Int $rate = 4) {
+        if $!dynamic-target < $!dynamic {
+            $!dynamic -= $rate
+        }
+        else {
+            $!dynamic += $rate
+        }
     }
 }
 
