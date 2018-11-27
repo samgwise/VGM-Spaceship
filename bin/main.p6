@@ -26,8 +26,8 @@ my ScaleVec $dominant       = scalevec 4, 6, 8, 11;
 my ScaleVec $dominant7th    = scalevec 4, 6, 8, 10, 11;
 
 # tempo
-my $lento   = scalevec(0, 1.2);
-my $vivace  = scalevec(0, 0.45);
+my $lento   = scalevec(0, 2.4);
+my $vivace  = scalevec(0, 0.9);
 
 # dynamics
 my $soft = 40; # piano
@@ -107,15 +107,48 @@ for 1..* {
             # standard step behaviour
             @phrase-queue.push: -> $state, $delta {
                 say "creating step $step for delta $delta, dynamic: { $state.dynamic }";
+                # Update current dynamic if needed
                 $state.dynamic-update;
+
+                # Get chord for this phrase step
                 $state.pitch-structure.pop;
                 $state.pitch-structure.push: @phrase-chords.shift;
-                my $struct = $state.fitted-pitch-contour($step / $steps);
+
+                # Get contour for this phrase and add it to the history
+                $state.contour-history.unshift: $state.fitted-pitch-contour($step / $steps, $state.pitch-structure); # assign to 0
+                $state.contour-history.pop if $state.contour-history.elems > $steps;
+
+                my $next-contour = $state.fitted-pitch-contour( (min ($step + 1) / $steps, 1/1), [|$state.pitch-structure[0..*-2], @phrase-chords.head // $state.pitch-structure.tail] );
+
                 my $block-duration = $state.rhythmn-structure.head.interval($step, $step + 1);
 
                 await Promise.at($delta).then: {
-                    say $struct;
-                    $out.send-note('track-0', ($_+60).Int, $state.dynamic-live($step), ($block-duration * 1000).Int) for $struct.values;
+                    say .contour-history[0], .scale-interval(.contour-history[0].tail, $next-contour.tail), $next-contour given $state;
+
+                    my ($bass, $melody) = $state.contour-history.head;
+                    my $next-step-interval = $state.scale-interval($melody, $next-contour.tail);
+
+                    if $state.cruise {
+                        $out.send-note('track-6', ($bass+60).Int, $state.dynamic-live($step), ($block-duration * 990).Int);
+                    }
+
+                    if $state.combat {
+                        # bass
+                        for 0..7 {
+                            $out.send-note( 'track-0', ($bass+60).Int, $state.dynamic-live($step), (($block-duration / 8) * 900).Int, :at( $delta + (($block-duration / 7) * $_) ) );
+                        }
+
+                        # melody
+                        for 0..$next-step-interval -> $passing-note {
+                            my $note = .map-onto-scale(.map-into-scale($melody).head, $passing-note).sum given $state;
+
+                            say "Scheduleing for $delta + (($block-duration / max 1, $next-step-interval) * $passing-note) ";
+                            $out.send-note( 'track-3', ($note + 60).Int, $state.dynamic-live($step), (($block-duration / $next-step-interval) * 990).Int, :at( $delta + (($block-duration / max 1, $next-step-interval) * $passing-note) ) );
+                        }
+
+                        # glock highlights
+                        $out.send-note( 'track-1', ($melody + 60).Int, $state.dynamic-live($step), ($block-duration * 990).Int );
+                    }
 
                     # queued up while in combat and only during combat
                     if $combat-running and $state.combat {

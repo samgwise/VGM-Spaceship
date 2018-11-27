@@ -42,6 +42,8 @@ our class State {
     has Bool $.combat is rw = False;
     has Bool $.cruise is rw = False;
 
+    has @.contour-history = (0, 0);
+
     # select a pair of pitch bounds from a context given a transition
     method pitch-contour($t) {
         order-pair (bézier $t, @!curve-upper), (bézier $t, @!curve-lower)
@@ -67,13 +69,30 @@ our class State {
         eager reduce { $^b.step($^a) }, $_, |@!rhythmn-structure.reverse for @values
     }
 
+    # Calculate absolute interval in scale terms
+    method scale-interval(Numeric $a, Numeric $b --> Numeric) {
+        [-] do reduce { $^b.reflexive-step($^a) }, $_, |@!pitch-structure[0..*-2] for $b, $a
+    }
+
+    method map-into-scale(+@values) {
+        eager reduce { $^b.reflexive-step($^a) }, $_, |@!pitch-structure[0..*-2] for @values
+    }
+
+    method map-onto-scale(+@values) {
+        eager reduce { $^b.step($^a) }, $_, |@!pitch-structure[0..*-2].reverse for @values
+    }
+
     # Extract a pitch contour, fitted to our pitch structure
-    method fitted-pitch-contour($t) {
-        self.map-onto-pitch(
-            self.map-into-pitch(
-                self.pitch-contour($t)
-            ).map( *.round )
-        )
+    method fitted-pitch-contour($t, @stack) {
+        self.pitch-contour($t)
+        .map( {
+            reduce { $^b.reflexive-step: $^a }, $_, |@stack
+        } )
+        .map( *.round )
+        .map( {
+            reduce { $^b.step: $^a }, $_, |@stack.reverse
+        } )
+        .List
     }
 
     #! Emulate a more lively dynamic behaviour
@@ -100,7 +119,7 @@ our class OscSender {
     has @.targets = ('127.0.0.1', '5635'), ;
 
     #! send a note message to targets
-    method send-note(Str $name, Int $note, Int $velocity, Int $duration, Instant :$at) {
+    method send-note(Str $name, Int(Cool) $note, Int(Cool) $velocity, Int(Cool) $duration, Instant :$at) {
         my Net::OSC::Message $msg .= new(
             :path("/play-out/$name/note")
             :args($note, $velocity, $duration)
@@ -145,12 +164,20 @@ our sub drum-pattern($step, $duration, $state) is export {
             # kick
             take (38, $duration, $state.dynamic-live($step), 0);
             # snare
-            take (46, $duration, ($state.dynamic-live($step) / 2).Int, $duration - ($duration / 2)) if $_ mod 4 == 3 ;
+            take (46, ($duration / 2).Int, $state.dynamic-live($step), $duration / 2) if $_ mod 4 == 3;
             # upbeat kick
-            take (36, $duration, ($state.dynamic-live($step) / 4).Int, $duration - ($duration / 4)) if $_ == 7;
+            take (36, ($duration / 4).Int, $state.dynamic-live($step), $duration - ($duration / 4)) if $_ == 7;
+        }
+        when $_ mod 4 == 0 {
+            take (36, $duration / 3, $state.dynamic-live($step), 0);
+            take (36, $duration / 3, $state.dynamic-live($step), ($duration / 3) );
+            take (36, $duration / 3, $state.dynamic-live($step), ($duration / 3) * 2 )
         }
         default {
-            take (36, $duration, $state.dynamic-live($step), 0)
+            take (36, $duration / 4, $state.dynamic-live($step), 0);
+            take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) );
+            take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
+            take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 3 )
         }
     }
 }

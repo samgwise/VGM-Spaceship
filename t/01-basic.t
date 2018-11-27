@@ -30,12 +30,14 @@ is $s.map-onto-pitch(-12, 0), (-12, 0), "Map onto pitch structure";
 
 is $s.map-onto-rhythmn(0, 1), (0, 1), "Map onto rhythmn structure";
 
+is $s.scale-interval($_, 0), -$_, "scalic interval of $_ to 0 is { -$_ }" for -6..6;
+
 #
 # Fitted contour
 #
-is $s.fitted-pitch-contour(0/1), (-12, 0), "Fitted pitch contour begining";
-is $s.fitted-pitch-contour(1/2), (-12, 0), "Fitted pitch contour middle";
-is $s.fitted-pitch-contour(1/1), (-12, 0), "Fitted pitch contour end";
+is $s.fitted-pitch-contour(0/1, $s.pitch-structure), (-12, 0), "Fitted pitch contour begining";
+is $s.fitted-pitch-contour(1/2, $s.pitch-structure), (-12, 0), "Fitted pitch contour middle";
+is $s.fitted-pitch-contour(1/1, $s.pitch-structure), (-12, 0), "Fitted pitch contour end";
 
 #
 # Interval class
