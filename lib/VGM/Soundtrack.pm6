@@ -29,6 +29,27 @@ This library is free software; you can redistribute it and/or modify it under th
 
 =end pod
 
+our class Instrument {
+    has %!held-notes;
+
+    # Add held note to storage
+    method hold(Int(Cool) $note, Int $blocks) {
+        %!held-notes{$note} = $blocks + (%!held-notes{$note}:exists ?? %!held-notes{$note} !! 0)
+    }
+
+    #! Check if note is held
+    method is-held(Int(Cool) $note --> Bool) {
+        ( %!held-notes{$note}:exists and %!held-notes{$note} > 0) ?? True !! False
+    }
+
+    #! Update block counter on held notes
+    method update-held(Int $steps = 1) {
+        for %!held-notes.kv -> $note, $counter {
+            %!held-notes{$note} -= $steps if $counter > 0
+        }
+    }
+}
+
 our class State {
     has Numeric @.curve-upper = 0, 0;
     has Numeric @.curve-lower = -12, -12;
@@ -43,6 +64,8 @@ our class State {
     has Bool $.cruise is rw = False;
 
     has @.contour-history = (0, 0);
+
+    has Instrument %.instruments;
 
     # select a pair of pitch bounds from a context given a transition
     method pitch-contour($t) {
@@ -108,6 +131,13 @@ our class State {
         }
         else {
             $!dynamic += $rate
+        }
+    }
+
+    #! update instrument counters
+    method instrument-update() {
+        for %!instruments.values {
+            .update-held
         }
     }
 }

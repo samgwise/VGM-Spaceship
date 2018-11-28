@@ -73,6 +73,11 @@ my VGM::Soundtrack::State $state .= new(
     :pitch-structure($chromaitc, $pentatonic, $tonic)
 );
 
+# prepare instrument state objects
+for 0..8 {
+    $state.instruments{"track-$_"} .= new
+}
+
 # Define update (play) behaviour
 # Update curve of phrase step
 # Orchestrate to curve
@@ -109,6 +114,7 @@ for 1..* {
                 say "creating step $step for delta $delta, dynamic: { $state.dynamic }";
                 # Update current dynamic if needed
                 $state.dynamic-update;
+                $state.instrument-update;
 
                 # Get chord for this phrase step
                 $state.pitch-structure.pop;
@@ -129,7 +135,20 @@ for 1..* {
                     my $next-step-interval = $state.scale-interval($melody, $next-contour.tail);
 
                     if $state.cruise {
-                        $out.send-note('track-6', ($bass+60).Int, $state.dynamic-live($step), ($block-duration * 990).Int);
+                        $out.send-note('track-6', $bass + 60 , $state.dynamic-live($step) + 10, $block-duration * 990);
+                    }
+
+                    my $range = $melody - $bass;
+                    my $current-chord = $state.pitch-structure.tail;
+                    my $common-tone-durations = common-tone-durations($state, $current-chord, @phrase-chords);
+                    say "Arrangement space: $range, common tones: $common-tone-durations, current chord { $current-chord.scale-pv }";
+                    for $common-tone-durations.kv -> $index, $duration {
+                        my $instrument = $state.instruments<track-4>;
+                        my $absolute-pitch = $state.map-onto-scale($current-chord.scale-pv[$index]).head;
+                        if $duration > 0 and !$instrument.is-held($absolute-pitch) {
+                            $instrument.hold($absolute-pitch, $duration);
+                            $out.send-note( 'track-4', $absolute-pitch + 60, $state.dynamic-live($step), ($block-duration * (1 + $duration)) * 990);
+                        }
                     }
 
                     if $state.combat {
