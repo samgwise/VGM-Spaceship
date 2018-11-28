@@ -157,6 +157,21 @@ our sub interval-class(Numeric $a, Numeric $b --> Numeric) is export {
     (abs $b - $a) % 12
 }
 
+#! Determine block durations of each chord tone
+our sub common-tone-durations(State $s, ScaleVec $chord, @progression --> List) is export {
+    do for $chord.scale-pv.values -> $pitch {
+        [+] do gather for @progression -> $future-chord {
+            my $common-tone-count = [+] do gather for $future-chord.scale-pv.values -> $chord-tone {
+                my $match = ( ($s.map-onto-scale($pitch).head % 12) == ($s.map-onto-scale($chord-tone).head % 12) ) ?? 1 !! 0;
+                take $match;
+                last if $match == 1;
+            }
+            take $common-tone-count;
+            last if $common-tone-count == 0;
+        }
+    }
+}
+
 # Drum sequence
 our sub drum-pattern($step, $duration, $state) is export {
     gather given $step % 8 {

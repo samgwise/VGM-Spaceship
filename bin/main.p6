@@ -142,7 +142,6 @@ for 1..* {
                         for 0..$next-step-interval -> $passing-note {
                             my $note = .map-onto-scale(.map-into-scale($melody).head, $passing-note).sum given $state;
 
-                            say "Scheduleing for $delta + (($block-duration / max 1, $next-step-interval) * $passing-note) ";
                             $out.send-note( 'track-3', ($note + 60).Int, $state.dynamic-live($step), (($block-duration / $next-step-interval) * 990).Int, :at( $delta + (($block-duration / max 1, $next-step-interval) * $passing-note) ) );
                         }
 

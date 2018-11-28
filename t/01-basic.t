@@ -50,4 +50,17 @@ for (
     is interval-class($a, $b), $ic, "interval class of [$a, $b] is $ic"
 }
 
+#
+# Common tone relations
+#
+my $tonic       = scalevec(0, 4, 7, 12);
+my $subdominant = scalevec(5, 9, 12, 17);
+my $dominant    = scalevec(7, 11, 14, 19);
+is common-tone-durations($s, $tonic, [$subdominant, $dominant, $tonic]), (1, 0, 0, 1), "Common tone durations";
+is common-tone-durations($s, $tonic, [$subdominant, $tonic, $dominant]), (2, 0, 0, 2), "Common tone durations";
+is common-tone-durations($s, $tonic, [$dominant, $subdominant, $tonic]), (0, 0, 1, 0), "Common tone durations";
+is common-tone-durations($s, $subdominant, [$dominant, $tonic, $dominant]), (0, 0, 0, 0), "Common tone durations";
+is common-tone-durations($s, $tonic, [$tonic]), (1, 1, 1, 1), "Common tone durations";
+is common-tone-durations($s, $tonic, [$tonic, $tonic]), (2, 2, 2, 2), "Common tone durations";
+
 done-testing;
