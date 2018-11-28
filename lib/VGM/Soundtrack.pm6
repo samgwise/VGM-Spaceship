@@ -204,7 +204,7 @@ our sub common-tone-durations(State $s, ScaleVec $chord, @progression --> List) 
 
 # Drum sequence
 our sub drum-pattern($step, $duration, $state) is export {
-    gather given $step % 8 {
+    gather given $step % 32 {
         when $_ mod 2 == 1 {
             # kick
             take (38, $duration, $state.dynamic-live($step), 0);
@@ -213,16 +213,16 @@ our sub drum-pattern($step, $duration, $state) is export {
             # upbeat kick
             take (36, ($duration / 4).Int, $state.dynamic-live($step), $duration - ($duration / 4)) if $_ == 7;
         }
-        when $_ mod 4 == 0 {
+        when $_ mod 8 == 0 {
             take (36, $duration / 3, $state.dynamic-live($step), 0);
-            take (36, $duration / 3, $state.dynamic-live($step), ($duration / 3) );
+            #take (36, $duration / 3, $state.dynamic-live($step), ($duration / 3) );
             take (36, $duration / 3, $state.dynamic-live($step), ($duration / 3) * 2 )
         }
         default {
             take (36, $duration / 4, $state.dynamic-live($step), 0);
-            take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) );
+            #take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) );
             take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
-            take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 3 )
+            #take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 3 )
         }
     }
 }
