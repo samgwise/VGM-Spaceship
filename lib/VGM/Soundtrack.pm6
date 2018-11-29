@@ -205,23 +205,22 @@ our sub common-tone-durations(State $s, ScaleVec $chord, @progression --> List) 
 # Drum sequence
 our sub drum-pattern($step, $duration, $state) is export {
     gather given $step % 32 {
-        when $_ mod 2 == 1 {
-            # kick
-            take (38, $duration, $state.dynamic-live($step), 0);
+        when 30|31 {
             # snare
-            take (46, ($duration / 2).Int, $state.dynamic-live($step), $duration / 2) if $_ mod 4 == 3;
-            # upbeat kick
-            take (36, ($duration / 4).Int, $state.dynamic-live($step), $duration - ($duration / 4)) if $_ == 7;
+            take (38, $duration, $state.dynamic-live($step), 0);
+            # cymbol open
+            take (49, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
         }
-        when $_ mod 8 == 0 {
-            take (36, $duration / 3, $state.dynamic-live($step), 0);
-            #take (36, $duration / 3, $state.dynamic-live($step), ($duration / 3) );
-            take (36, $duration / 3, $state.dynamic-live($step), ($duration / 3) * 2 )
+        when $_ mod 2 == 1 {
+            # snare
+            take (38, $duration, $state.dynamic-live($step), 0);
+            # hi-hat open
+            take (46, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
         }
         default {
-            take (36, $duration / 4, $state.dynamic-live($step), 0);
+            take (42, $duration / 4, $state.dynamic-live($step), 0);
             #take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) );
-            take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
+            take (42, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
             #take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 3 )
         }
     }

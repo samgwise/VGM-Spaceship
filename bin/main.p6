@@ -68,9 +68,9 @@ start react whenever sync-scene-events($listener, $scene-config) {
 }
 
 my @contours =
-        ((0, 15, 25, 30, 20), (-12, -5, -12, -5)),
+        ((0, 40, 30, 20), (-12, -5, -12, -5)),
         ((25, 30, 25, 20, 15), (-12, -24, -17)),
-        ((10, 15, 25, 35, 30), (-17, -12, -17)),
+        ((10, 15, 30, 45, 30), (-17, -12, -17)),
         ((25, 30, 20, 7, 12), (-24, -17, -29));
 
 # Define state record
@@ -94,6 +94,8 @@ my ScaleVec @phrase-chords;
 # Run loop
 my $step-delta = now;
 my $step = 0;
+# How many phrases we have iterated over
+my $phrase-counter = 0;
 for 1..* {
 
     # update
@@ -139,8 +141,11 @@ for 1..* {
             $dominant7th,
             $dominant7th;
 
-            $state.curve-upper = @contours[$_ % @contours.elems].head;
-            $state.curve-lower = @contours[$_ % @contours.elems].tail;
+            $state.curve-upper = @contours[$phrase-counter % @contours.elems].head;
+            $state.curve-lower = @contours[$phrase-counter % @contours.elems].tail;
+
+            # manage our phrase iterations
+            $phrase-counter++;
 
         for 0..^$steps -> $step {
             # standard step behaviour
@@ -163,54 +168,69 @@ for 1..* {
                 my $block-duration = $state.rhythmn-structure.head.interval($step, $step + 1);
 
                 await Promise.at($delta).then: {
-                    say .contour-history[0], .scale-interval(.contour-history[0].tail, $next-contour.tail), $next-contour given $state;
+                    say .contour-history[0], .scale-interval(.contour-history[0].tail, $next-contour.tail), $next-contour, ' ', .curve-upper, '/', .curve-lower given $state;
 
                     my ($bass, $melody) = $state.contour-history.head;
                     my $next-step-interval = $state.scale-interval($melody, $next-contour.tail);
 
-                    if $state.cruise {
-                        $out.send-note('track-6', $bass + 60 , $state.dynamic-live($step) + 10, $block-duration * 990);
-                    }
-
-                    my $range = $melody - $bass;
-                    my $current-chord = $state.pitch-structure.tail;
-                    my $common-tone-durations = common-tone-durations($state, $current-chord, @phrase-chords);
-                    say "Arrangement space: $range, common tones: $common-tone-durations, current chord { $current-chord.scale-pv }";
-                    my $track = $state.combat ?? 'track-5' !! 'track-4';
-                    for $common-tone-durations.kv -> $index, $duration {
-                        my $instrument = $state.instruments{$track};
-                        my $absolute-pitch = $state.map-onto-scale($current-chord.scale-pv[$index]).head;
-                        if $duration > 0 and !$instrument.is-held($absolute-pitch) {
-                            $instrument.hold($absolute-pitch, $duration);
-                            $out.send-note( $track, $absolute-pitch + 60, $state.dynamic-live($step), ($block-duration * (1 + $duration)) * 990);
-                        }
-                    }
-
-                    if $state.combat {
+                    # Rhythm instruments first else other calculations will disrupt timing :(
+                    if $state.combat or $combat-running {
                         # bass
-                        my $sub-division = 1;
+                        my $sub-division = ($state.combat and $step % 2 == 1) ?? 2 !! 1;
                         for 0..^$sub-division {
-                            $out.send-note( 'track-0', $bass + 60, $state.dynamic-live($step), ($block-duration / $sub-division) * 800, :at( $delta + (($block-duration / $sub-division) * $_) ) );
+                            $out.send-note( 'track-0', $bass + (12 * $_) + 60, $state.dynamic-live($step), ($block-duration / $sub-division) * 800, :at( $delta + (($block-duration / $sub-division) * $_) ) );
                         }
 
+                        # kick
+                        $out.send-note('track-2', 36, $block-duration * 250, $state.dynamic-live($step) + 10) if $state.combat;
                     }
 
-                    if $state.combat or $step % 32 == 0|1|2|3|4|9|10|11|12 {
-                        # melody
+                    if $state.cruise and $step % 4 == 0 {
+                        $out.send-note('track-6', $bass + 60 , $state.dynamic-live($step) + 10, $block-duration * 995 * 4);
+                    }
+
+                    # queued up while in combat and only during combat
+                    if $combat-running and $state.combat {
+                        $out.send-note('track-2', $_[0], $_[1] * 1000, $_[2], :at($delta + $_[3])) for drum-pattern($step, $block-duration, $state)
+                    }
+
+                    # Build pad and chior parts
+                    my $range = $melody - $bass;
+                    start {
+                        my $current-chord = $state.pitch-structure.tail;
+                        my $common-tone-durations = common-tone-durations($state, $current-chord, @phrase-chords);
+                        say "Arrangement space: $range, common tones: $common-tone-durations, current chord { $current-chord.scale-pv }";
+                        my $track = $state.combat ?? 'track-5' !! 'track-4';
+                        for $common-tone-durations.kv -> $index, $duration {
+                            my $instrument = $state.instruments{$track};
+                            my $absolute-pitch = $state.map-onto-scale($current-chord.scale-pv[$index]).head;
+                            if $duration > 0 and !$instrument.is-held($absolute-pitch) {
+                                $instrument.hold($absolute-pitch, $duration);
+                                $out.send-note( $track, $absolute-pitch + 60, $state.dynamic-live($step), ($block-duration * (1 + $duration)) * 990);
+                            }
+                        }
+                    }
+
+                    if $state.combat or $step % 32 == 0|1|2|3|4|8|9|10|11|12|13 {
+                        # glock melody
+                        # during cruise play on the offbeat
+                        my $offset = $state.cruise ?? $block-duration / 2 !! 0;
                         for 0..$next-step-interval -> $passing-note {
                             my $note = .map-onto-scale(.map-into-scale($melody).head + $passing-note).sum given $state;
+                            # Do not repeat notes during combat
+                            next if $state.combat and $note == $state.contour-history[1].tail;
 
-                            $out.send-note( 'track-3', ($note + 60).Int, (max 60, $state.dynamic-live($step) + 10), (($block-duration / max 1, $next-step-interval) * 990).Int, :at( $delta + (($block-duration / max 1, $next-step-interval) * $passing-note) ) );
+                            $out.send-note( 'track-3', ($note + 60).Int, (max 60, $state.dynamic-live($step) + 10), (($block-duration / max 1, $next-step-interval) * 990).Int, :at( $delta + $offset + (($block-duration / max 1, $next-step-interval) * $passing-note) ) );
                         }
                     }
 
                     if $combat-running {
-                        # synth hold
+                        # Piano chords
                         if $step % 4 == 0 {
-                            $out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody + 12).head - $_).head + 60, $state.dynamic-live($step), $block-duration * 500 ) for 0..3;
+                            $out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody).head - ($_ + 1)).head + 60, $state.dynamic-live($step), $block-duration * 500 ) for 0..3;
                         }
                         elsif $step % 2 == 0 and $state.cruise {
-                            $out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody + 12).head - ($_ * 2)).head + 60, $state.dynamic-live($step), $block-duration * 500 ) for 0..3;
+                            $out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody + 12).head - (($_ + 1) * 2)).head + 60, $state.dynamic-live($step), $block-duration * 500 ) for 0..3;
                         }
 
                         if $step % 3 == 0 and $state.combat {
@@ -218,10 +238,11 @@ for 1..* {
                         }
                     }
 
-                    # queued up while in combat and only during combat
-                    if $combat-running and $state.combat {
-                        $out.send-note('track-2', $_[0], $_[1] * 1000, $_[2], :at($delta + $_[3])) for drum-pattern($step, $block-duration, $state)
+                    if $step == 6|14|22|24|30 {
+                        # Tubular bells
+                        $out.send-note: 'track-8', $state.map-onto-pitch($state.map-into-pitch($bass + ($range / 2) + ($step % 3)).head.round).head + 60, $state.dynamic-live($step), $block-duration * 4;
                     }
+
                 }
                 #say "Step $_ with state { $state.gist } and curve {  }"
             }
