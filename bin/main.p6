@@ -1,7 +1,7 @@
 #! /usr/bin/env perl6
 use v6.c;
 
-unit sub MAIN(Int :$steps = 32, Str :$scene!);
+unit sub MAIN(Int :$steps = 32, Str :$scene!, Str :$record);
 use ScaleVec;
 use Math::Curves;
 use Reaper::Control;
@@ -35,6 +35,14 @@ my $soft = 40; # piano
 my $loud = 105; # forte
 
 my VGM::Soundtrack::OscSender $out .= new;
+
+my $recording-fh = .IO.open(:a) with $record;
+start react whenever $out.record.Supply {
+    # CLOSE { .close with $recording-fh }
+    # CATCH { warn $_ }
+    .put;
+    # $recording-fh.put: $_
+}
 
 # Map events
 my atomicint $is-playing = 0;

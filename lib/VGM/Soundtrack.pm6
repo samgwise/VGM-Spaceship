@@ -148,8 +148,12 @@ our class OscSender {
     has $.socket  = IO::Socket::Async.udp;
     has @.targets = ('127.0.0.1', '5635'), ;
 
+    has Supplier $.record .= new;
+
     #! send a note message to targets
     method send-note(Str $name, Int(Cool) $note, Int(Cool) $velocity, Int(Cool) $duration, Instant :$at) {
+        $!record.emit: "$name, { $at ?? $at.Rat.nude !! now.Rat.nude }, $note, $velocity, $duration";
+
         my Net::OSC::Message $msg .= new(
             :path("/play-out/$name/note")
             :args($note, $velocity, $duration)
