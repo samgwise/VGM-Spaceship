@@ -54,7 +54,7 @@ our class State {
     has Numeric @.curve-upper is rw = 0, 0;
     has Numeric @.curve-lower is rw = -12, -12;
 
-    has ScaleVec @.pitch-structure   = scalevec(0, 1);
+    has ScaleVec @.pitch-structure   = scalevec(0, 1), scalevec(0, 1);
     has ScaleVec @.rhythmn-structure = scalevec(0, 1);
 
     has Int $.dynamic is rw = 80;
@@ -199,6 +199,16 @@ our sub common-tone-durations(State $s, ScaleVec $chord, @progression --> List) 
             take $common-tone-count;
             last if $common-tone-count == 0;
         }
+    }
+}
+
+#! determine the tonicised transposition of the scale space given two chords
+our sub tonicise-scale-distance(State $s, ScaleVec $a, ScaleVec $b --> Numeric) is export {
+    given (5 - ([-] $s.map-onto-scale($b.root, $a.root))) % 12 {
+        when abs($s.pitch-structure[*-2].root + $_) > abs($s.pitch-structure[*-2].root + ($_ - 12)) {
+            $_ - 12
+        }
+        default { $_ }
     }
 }
 

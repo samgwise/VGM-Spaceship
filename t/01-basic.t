@@ -63,4 +63,13 @@ is common-tone-durations($s, $subdominant, [$dominant, $tonic, $dominant]), (0, 
 is common-tone-durations($s, $tonic, [$tonic]), (1, 1, 1, 1), "Common tone durations";
 is common-tone-durations($s, $tonic, [$tonic, $tonic]), (2, 2, 2, 2), "Common tone durations";
 
+#
+# Transpotion difference
+#
+is tonicise-scale-distance($s, $tonic, $subdominant), 0, "Tonic to subdominant is 0";
+is tonicise-scale-distance($s, $dominant, $tonic), 0, "Dominant to tonic is 0";
+is tonicise-scale-distance($s, $tonic, $dominant), -2, "Tonic to dominant is -2";
+is tonicise-scale-distance($s, $subdominant, $tonic), -2, "Subdominant to tonic is 0";
+is tonicise-scale-distance($s, $subdominant, $dominant), 3, "Subdominant to dominant is 3";
+
 done-testing;

@@ -94,14 +94,21 @@ my ScaleVec @phrase-chords;
 # Run loop
 my $step-delta = now;
 my $step = 0;
+# What was the game state of the previous loop iteration
+my $previous-game-state = 0;
+# How many beats have passed, should I force a change
+my $boredom-counter = 0;
+my $boredom-threshold = 84;
 # How many phrases we have iterated over
 my $phrase-counter = 0;
+my $phrase-beats-since-change = 0;
 for 1..* {
 
     # update
 
     # Queue up another phrase length of behaviours
     unless @phrase-queue {
+        $phrase-beats-since-change = 0;
         $step = 0;
         # Were we in cruise or combat when this phrase was queued
         my $combat-running = $state.combat;
@@ -249,21 +256,44 @@ for 1..* {
         }
     }
 
+    $phrase-beats-since-change++;
     given ⚛$game-state {
+        when $previous-game-state {
+            # no change
+        }
         when 0 {
+            say "Updating structure for cruise";
+            $previous-game-state = $_;
+            $boredom-counter = 0;
+            $boredom-threshold = 84 - $phrase-beats-since-change; # change about half way through repeat 3
             $state.rhythmn-structure[0] = $lento;
-            $state.pitch-structure[1] = $pentatonic;
+            $state.pitch-structure[1] = $pentatonic.transpose($state.pitch-structure.head.root + tonicise-scale-distance($state, $state.pitch-structure.tail, @phrase-chords.head));
+            say "Scale transposed by { $state.pitch-structure[1].root } semitones";
             $state.dynamic-target = $soft;
             $state.combat = False;
             $state.cruise = True;
         }
         when 1 {
+            say "Updating structure for combat";
+            $previous-game-state = $_;
+            $boredom-counter = 0;
+            $boredom-threshold = 84 - $phrase-beats-since-change;
             $state.rhythmn-structure[0] = $vivace;
-            $state.pitch-structure[1] = $nat-minor;
+            $state.pitch-structure[1] = $nat-minor.transpose($state.pitch-structure.head.root + tonicise-scale-distance($state, $state.pitch-structure.tail, @phrase-chords.head));
+            say "Scale transposed by { $state.pitch-structure[1].root } semitones";
             $state.dynamic-target = $loud;
             $state.combat = True;
             $state.cruise = False;
         }
+        default {
+            warn "Unhandled game state $_";
+        }
+    }
+
+    if ++$boredom-counter > $boredom-threshold {
+        $previous-game-state = -1; # force a change
+        $boredom-threshold = 64; # bring next retrigger sooner
+        say "Triggered change from bordom counter"
     }
 
     # Execute next behaviour
