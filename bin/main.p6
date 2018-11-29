@@ -189,7 +189,8 @@ for 1..* {
                         }
 
                         # kick
-                        $out.send-note('track-2', 36, $block-duration * 250, $state.dynamic-live($step) + 10) if $state.combat;
+                        $out.send-note('track-2', 36, $block-duration * 250, $state.dynamic-live($step) + 10) if $state.combat and $step % 2 == 1;
+                        $out.send-note( 'track-2', 36, $block-duration * 250, $state.dynamic-live($step)) if $state.combat and $cruise-running and ($step % 2 == 0);
                     }
 
                     if $state.cruise and $step % 4 == 0 {
@@ -293,7 +294,7 @@ for 1..* {
     if ++$boredom-counter > $boredom-threshold {
         $previous-game-state = -1; # force a change
         $boredom-threshold = 64; # bring next retrigger sooner
-        say "Triggered change from bordom counter"
+        say "Change triggered from bordom counter"
     }
 
     # Execute next behaviour

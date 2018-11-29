@@ -61,7 +61,7 @@ our class State {
     has Int $.dynamic-target is rw = 80;
 
     has Bool $.combat is rw = False;
-    has Bool $.cruise is rw = False;
+    has Bool $.cruise is rw = True;
 
     has @.contour-history = (0, 0);
 
@@ -221,17 +221,35 @@ our sub drum-pattern($step, $duration, $state) is export {
             # cymbol open
             take (49, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
         }
-        when $_ mod 2 == 1 {
+        when 14|15 {
             # snare
             take (38, $duration, $state.dynamic-live($step), 0);
-            # hi-hat open
-            take (46, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
+            # kick
+            take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 3 )
+        }
+        when $_ mod 8 == 7 {
+            take (40, $duration / 4, $state.dynamic-live($step), 0);
+            take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
+        }
+        when $_ mod 4 == 1 {
+            # snare
+            take (38, $duration, $state.dynamic-live($step), 0);
+            # # hi-hat open
+            # take (46, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
+        }
+        when $_ mod 2 == 0 {
+            # snare
+            take (36, $duration, $state.dynamic-live($step), ($duration / 4) * 3);
+            # # hi-hat open
+            # take (46, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
+            # kick
+            take (36, $duration / 4, $state.dynamic-live($step), 0);
         }
         default {
-            take (42, $duration / 4, $state.dynamic-live($step), 0);
-            #take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) );
-            take (42, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
-            #take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 3 )
+            take (45, $duration / 4, $state.dynamic-live($step), 0);
+            take (45, $duration / 4, $state.dynamic-live($step), ($duration / 3) );
+            take (41, $duration / 4, $state.dynamic-live($step), ($duration / 3) * 2 );
+            # take (36, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 3 )
         }
     }
 }
