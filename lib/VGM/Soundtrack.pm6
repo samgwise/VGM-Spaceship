@@ -51,8 +51,8 @@ our class Instrument {
 }
 
 our class State {
-    has Numeric @.curve-upper = 0, 0;
-    has Numeric @.curve-lower = -12, -12;
+    has Numeric @.curve-upper is rw = 0, 0;
+    has Numeric @.curve-lower is rw = -12, -12;
 
     has ScaleVec @.pitch-structure   = scalevec(0, 1);
     has ScaleVec @.rhythmn-structure = scalevec(0, 1);

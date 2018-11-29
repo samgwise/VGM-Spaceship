@@ -67,6 +67,12 @@ start react whenever sync-scene-events($listener, $scene-config) {
     }
 }
 
+my @contours =
+        ((0, 15, 25, 30, 20), (-12, -5, -12, -5)),
+        ((25, 30, 25, 20, 15), (-12, -24, -17)),
+        ((10, 15, 25, 35, 30), (-17, -12, -17)),
+        ((25, 30, 20, 7, 12), (-24, -17, -29));
+
 # Define state record
 my VGM::Soundtrack::State $state .= new(
     :curve-upper(0, 40, 30, -10.5)
@@ -132,6 +138,9 @@ for 1..* {
             $dominant7th,
             $dominant7th,
             $dominant7th;
+
+            $state.curve-upper = @contours[$_ % @contours.elems].head;
+            $state.curve-lower = @contours[$_ % @contours.elems].tail;
 
         for 0..^$steps -> $step {
             # standard step behaviour
