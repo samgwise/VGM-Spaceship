@@ -1,0 +1,42 @@
+{
+  "frameEvents" : [
+    {
+      "path" : "/begin",
+      "message" : null,
+      "delta" : 0
+    },
+    {
+      "path" : "/combat/stop",
+      "message" : [
+        "victory"
+      ],
+      "delta" : 0
+    },
+    {
+      "path" : "/combat/start",
+      "message" : null,
+      "delta" : 51.810
+    },
+    {
+      "path" : "/combat/stop",
+      "message" : [
+        "victory"
+      ],
+      "delta" : 198.412
+    },
+    {
+      "path" : "/docking/enter",
+      "message" : null,
+      "delta" : 301.739
+    },
+    {
+      "path" : "/end",
+      "message" : null,
+      "delta" : 310.530
+    }
+  ],
+  "meta" : {
+    "fileName" : "Rebel Galaxy 06.14.2016 - 21.22.42.11.DVR.mp4",
+    "fps" : 60
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "frameEvents" : [
+    {
+      "path" : "/begin",
+      "message" : null,
+      "delta" : 0
+    },
+    {
+      "path" : "/astroids",
+      "message" : [
+        "rock"
+      ],
+      "delta" : 0
+    },
+    {
+      "path" : "/discovered/location",
+      "message" : [
+        "nebula"
+      ],
+      "delta" : 0
+    },
+    {
+      "path" : "/warp/interupted",
+      "message" : [
+        "object"
+      ],
+      "delta" : 0.25
+    },
+    {
+      "path" : "/combat/start",
+      "message" : null,
+      "delta" : 8.8
+    },
+    {
+      "path" : "/combat/stop",
+      "message" : [
+        "victory"
+      ],
+      "delta" : 58.233333
+    },
+    {
+      "path" : "/warp/charge",
+      "message" : null,
+      "delta" : 115.85
+    },
+    {
+      "path" : "/warp/start",
+      "message" : null,
+      "delta" : 118.633333
+    },
+    {
+      "path" : "/detected/distress",
+      "message" : null,
+      "delta" : 120.733333
+    },
+    {
+      "path" : "/warp/stop",
+      "message" : null,
+      "delta" : 122.016667
+    },
+    {
+      "path" : "/warp/charge",
+      "message" : null,
+      "delta" : 127.883333
+    },
+    {
+      "path" : "/warp/start",
+      "message" : null,
+      "delta" : 130.7
+    },
+    {
+      "path" : "/discovered/location",
+      "message" : [
+        "junk-field"
+      ],
+      "delta" : 144.1
+    },
+    {
+      "path" : "/warp/interupted",
+      "message" : [
+        "object"
+      ],
+      "delta" : 145
+    },
+    {
+      "path" : "/mission/objective",
+      "message" : [
+        "achieved"
+      ],
+      "delta" : 145
+    },
+    {
+      "path" : "/warp/charge",
+      "message" : null,
+      "delta" : 171.983333
+    },
+    {
+      "path" : "/warp/start",
+      "message" : null,
+      "delta" : 174.8
+    },
+    {
+      "path" : "/warp/interupted",
+      "message" : [
+        "object"
+      ],
+      "delta" : 201.866667
+    },
+    {
+      "path" : "/warp/interupted",
+      "message" : [
+        "threat"
+      ],
+      "delta" : 201.866667
+    },
+    {
+      "path" : "/jumpgate/sequence/start",
+      "message" : null,
+      "delta" : 203.016667
+    },
+    {
+      "path" : "/jumpgate/sequence/enter",
+      "message" : null,
+      "delta" : 206.55
+    },
+    {
+      "path" : "/jumpgate/sequence/arrive",
+      "message" : null,
+      "delta" : 208.95
+    },
+    {
+      "path" : "/jumpgate/sequence/arrive",
+      "message" : null,
+      "delta" : 209.433333
+    },
+    {
+      "path" : "/mission/alert",
+      "message" : [
+        "craft-inbound"
+      ],
+      "delta" : 209.433333
+    },
+    {
+      "path" : "/combat/start",
+      "message" : null,
+      "delta" : 219.783333
+    },
+    {
+      "path" : "/warp/charge",
+      "message" : null,
+      "delta" : 231.2
+    },
+    {
+      "path" : "/warp/start",
+      "message" : null,
+      "delta" : 234
+    },
+    {
+      "path" : "/combat/stop",
+      "message" : [
+        "escape"
+      ],
+      "delta" : 234
+    },
+    {
+      "path" : "/warp/interupted",
+      "message" : [
+        "object"
+      ],
+      "delta" : 267.516667
+    },
+    {
+      "path" : "/docking/enter",
+      "message" : null,
+      "delta" : 270.6
+    },
+    {
+      "path" : "/mission/complete",
+      "message" : null,
+      "delta" : 270.6
+    },
+    {
+      "path" : "/base/location/equipment-bay",
+      "message" : null,
+      "delta" : 272.783333
+    },
+    {
+      "path" : "/base/location/shipyard",
+      "message" : null,
+      "delta" : 274.816667
+    },
+    {
+      "path" : "/docking/exit",
+      "message" : null,
+      "delta" : 283.2
+    },
+    {
+      "path" : "/end",
+      "message" : null,
+      "delta" : 285.533333
+    }
+  ],
+  "meta" : {
+    "fileName" : "Rebel Galaxy 06.14.2016 - 21.22.42.11.DVR.mp4",
+    "fps" : 60
+  }
+}
