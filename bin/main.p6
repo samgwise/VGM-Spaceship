@@ -20,11 +20,7 @@ my ScaleVec $whole-tone = scalevec(0, 2, 4, 6, 8, 10, 12);
 my ScaleVec $whole-tone-b = scalevec(-1, 1, 3, 5, 7, 9, 11);
 
 # chords
-my ScaleVec $tonic          = scalevec 0, 2, 4, 7;
-my ScaleVec $submedient     = scalevec 5, 7, 9, 12;
-my ScaleVec $subdominant    = scalevec 3, 5, 7, 10;
-my ScaleVec $dominant       = scalevec 4, 6, 8, 11;
-my ScaleVec $dominant7th    = scalevec 4, 6, 8, 10, 11;
+# See Sountrack.pm6
 
 # tempo
 my $lento   = scalevec(0, 1.2);
@@ -85,7 +81,7 @@ my @contours =
 my VGM::Soundtrack::State $state .= new(
     :curve-upper(0, 40, 30, -10.5)
     :curve-lower(-12, -12, -7, -15)
-    :pitch-structure($chromaitc, $pentatonic, $tonic)
+    :pitch-structure($chromaitc, $pentatonic, tonic)
 );
 
 # prepare instrument state objects
@@ -122,45 +118,13 @@ for 1..* {
         my $combat-running = $state.combat;
         my $cruise-running = $state.cruise;
 
-        @phrase-chords =
-            $tonic,
-            $tonic,
-            $tonic,
-            $tonic,
-            $submedient,
-            $submedient,
-            $submedient,
-            $submedient,
-            $subdominant,
-            $subdominant,
-            $subdominant,
-            $subdominant,
-            $dominant,
-            $dominant,
-            $dominant,
-            $dominant,
-            $submedient,
-            $submedient,
-            $submedient,
-            $submedient,
-            $subdominant,
-            $subdominant,
-            $subdominant,
-            $subdominant,
-            $dominant,
-            $dominant,
-            $dominant,
-            $dominant,
-            $dominant7th,
-            $dominant7th,
-            $dominant7th,
-            $dominant7th;
+        @phrase-chords = chord-planner;
 
-            $state.curve-upper = @contours[$phrase-counter % @contours.elems].head;
-            $state.curve-lower = @contours[$phrase-counter % @contours.elems].tail;
+        $state.curve-upper = @contours[$phrase-counter % @contours.elems].head;
+        $state.curve-lower = @contours[$phrase-counter % @contours.elems].tail;
 
-            # manage our phrase iterations
-            $phrase-counter++;
+        # manage our phrase iterations
+        $phrase-counter++;
 
         for 0..^$steps -> $step {
             # standard step behaviour

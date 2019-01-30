@@ -257,3 +257,97 @@ our sub drum-pattern($step, $duration, $state) is export {
         }
     }
 }
+
+# Chord defenitions
+my ScaleVec $tonic          = scalevec 0, 2, 4, 7;
+our sub tonic( --> ScaleVec) is export { $tonic }
+my ScaleVec $tonic7th       = scalevec 0, 2, 4, 6, 7;
+
+my ScaleVec $submedient     = scalevec 5, 7, 9, 12;
+my ScaleVec $subdominant    = scalevec 3, 5, 7, 10;
+my ScaleVec $supertonic     = scalevec 1, 3, 5, 8;
+my ScaleVec $medient        = scalevec 2, 4, 6, 9;
+my ScaleVec $dominant       = scalevec 4, 6, 8, 11;
+my ScaleVec $dominant-sus4  = scalevec 4, 7, 8, 11;
+my ScaleVec $dominant-sus2  = scalevec 4, 6, 8, 11, 12;
+my ScaleVec $dominant7th    = scalevec 4, 6, 8, 10, 11;
+my ScaleVec $subtonic       = scalevec -1, 1, 3, 6;
+
+#! plan a chord progression
+our sub chord-planner( --> Positional) is export {
+    $tonic,
+    $tonic,
+    $tonic,
+    $tonic,
+    |I-_-IV,
+    |IV-V,
+    $submedient,
+    $submedient,
+    $submedient,
+    $submedient,
+    |IV-V,
+    $dominant7th,
+    $dominant7th,
+    $dominant7th,
+    $dominant7th,
+}
+
+#! IV to five progression with variations
+sub IV-V() {
+    (
+        (
+            $subdominant,
+            $subdominant,
+            $subdominant,
+            $subdominant,
+            $dominant-sus4,
+            $dominant-sus4,
+            $dominant,
+            $dominant,
+        ),
+        (
+            $subdominant,
+            $subdominant,
+            $subdominant,
+            $subdominant,
+            $dominant,
+            $dominant,
+            $dominant,
+            $dominant,
+        ),
+        (
+            $subdominant,
+            $subdominant,
+            $supertonic,
+            $supertonic,
+            $dominant-sus2,
+            $dominant-sus2,
+            $dominant,
+            $dominant,
+        ),
+    ).pick
+}
+
+#! Pick a chord between I and IV covering a bar
+sub I-_-IV() {
+    (
+        (
+            $submedient,
+            $submedient,
+            $submedient,
+            $submedient,
+        ),
+        (
+            $tonic7th,
+            $tonic7th,
+            $tonic7th,
+            $tonic7th,
+        ),
+        (
+            $subtonic,
+            $subtonic,
+            $subtonic,
+            $subtonic,
+        ),
+    ).pick
+}
