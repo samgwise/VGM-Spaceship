@@ -6,3 +6,5 @@
 /resources/*.dylib
 .precomp/
 /VGM-Soundtrack-*
+*.toml
+*.exe

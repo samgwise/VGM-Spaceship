@@ -1,12 +1,13 @@
 #! /usr/bin/env perl6
 use v6.c;
 
-unit sub MAIN(Int :$steps = 32, Str :$scene!, Str :$record);
+unit sub MAIN(Int :$steps = 32, Str :$scene!, Str :$record, Str :$midi-sender);
 use ScaleVec;
 use Math::Curves;
 use Reaper::Control;
 use VGM::Scene::Events;
 use VGM::Soundtrack;
+use Config::TOML; # Used for interfacing with midi_sender.exe
 
 my $perfect     = Set(0, 7, 12);
 my $imperfect   = Set(3, 4, 8, 9);
@@ -30,7 +31,35 @@ my $vivace  = scalevec(0, 0.45);
 my $soft = 40; # piano
 my $loud = 105; # forte
 
-my VGM::Soundtrack::OscSender $out .= new;
+# Set up midi out based on arguments and environment
+constant midi-sender-config = 'midi_sender.toml';
+my VGM::Soundtrack::OscSender $out = do if $midi-sender.defined and $midi-sender.IO.f {
+    my $config = do with midi-sender-config.IO.slurp.&from-toml {
+        $_
+    }
+    else {
+        midi-sender-config.IO.spurt: q:to<TOML>;
+        listen_address = "127.0.0.1:10009"
+        midi_port = 0
+        TOML
+
+        midi-sender-config.IO.slurp.&from-toml
+    }
+
+    my $sender-handle = Proc::Async.new($midi-sender);
+    $sender-handle.start;
+
+    say "Using osc-interface MidiSender with $midi-sender";
+    VGM::Soundtrack::OscSender::MidiSender.new(
+        :targets( [$config<listen_address>.split(':', :skip-empty).head(2), ] ),
+        :midi-sender( $sender-handle ),
+        :channel-map( |(0..15).map( { "track-$_" => $_ + 1 } ) )
+    )
+}
+else {
+    say "Using osc-interface PD";
+    VGM::Soundtrack::OscSender::PD.new
+}
 
 my $recording-fh = .IO.open(:a) with $record;
 start react whenever $out.record.Supply {

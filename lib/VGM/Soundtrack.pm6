@@ -142,13 +142,17 @@ our class State {
     }
 }
 
-our class OscSender {
-    use Net::OSC::Message;
-
+our role OscSender {
     has $.socket  = IO::Socket::Async.udp;
     has @.targets = ('127.0.0.1', '5635'), ;
 
     has Supplier $.record .= new;
+
+    method send-note(Str $name, Int(Cool) $note, Int(Cool) $velocity, Int(Cool) $duration, Instant :$at) { ... }
+}
+
+our class OscSender::PD does OscSender {
+    use Net::OSC::Message;
 
     #! send a note message to targets
     method send-note(Str $name, Int(Cool) $note, Int(Cool) $velocity, Int(Cool) $duration, Instant :$at) {
@@ -168,6 +172,26 @@ our class OscSender {
         else {
             $!socket.write-to($_[0], $_[1], $msg.package) for @!targets
         }
+    }
+}
+
+our class OscSender::MidiSender does OscSender {
+    use Net::OSC::Message;
+    use Net::OSC::Types;
+
+    has %.channel-map is required;
+    has Proc::Async $.midi-sender is required;
+
+    #! send a note message to targets
+    method send-note(Str $name, Int(Cool) $note, Int(Cool) $velocity, Int(Cool) $duration, Instant :$at) {
+        $!record.emit: "$name, { $at ?? $at.Rat.nude !! now.Rat.nude }, $note, $velocity, $duration";
+
+        my Net::OSC::Message $msg .= new(
+            :path("/midi_sender/play")
+            :args(osc-double( $at.defined ?? ($at - now).Rat !! 0.0 ), osc-int64($duration), osc-int32(%!channel-map{$name}), $note, $velocity)
+        );
+
+        $!socket.write-to($_[0], $_[1], $msg.package) for @!targets
     }
 }
 
