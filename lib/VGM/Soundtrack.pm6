@@ -180,11 +180,13 @@ our class OscSender::MidiSender does OscSender {
     use Net::OSC::Types;
 
     has %.channel-map is required;
-    has Proc::Async $.midi-sender is required;
+    has Proc::Async $.midi-sender;
 
     #! send a note message to targets
     method send-note(Str $name, Int(Cool) $note, Int(Cool) $velocity, Int(Cool) $duration, Instant :$at) {
         $!record.emit: "$name, { $at ?? $at.Rat.nude !! now.Rat.nude }, $note, $velocity, $duration";
+
+        # say "Sending to midi channel: %!channel-map{$name} for name $name";
 
         my Net::OSC::Message $msg .= new(
             :path("/midi_sender/play")
