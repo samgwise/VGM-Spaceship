@@ -34,8 +34,8 @@ my $loud = 105; # forte
 # Set up midi out based on arguments and environment
 constant midi-sender-config = 'midi_sender.toml';
 my VGM::Soundtrack::OscSender $out = do if $midi-sender-remote or $midi-sender.defined and $midi-sender.IO.f {
-    my $config = do with midi-sender-config.IO.slurp.&from-toml {
-        $_
+    my $config = do if midi-sender-config.IO.f {
+        midi-sender-config.IO.slurp.&from-toml
     }
     else {
         midi-sender-config.IO.spurt: q:to<TOML>;
@@ -46,10 +46,11 @@ my VGM::Soundtrack::OscSender $out = do if $midi-sender-remote or $midi-sender.d
         midi-sender-config.IO.slurp.&from-toml
     }
 
-    my $sender-handle = Proc::Async.new($midi-sender);
-    $sender-handle.start;
+    my $sender-handle;
+    $sender-handle = Proc::Async.new($midi-sender) if $midi-sender.defined;
+    .start with $sender-handle;
 
-    say "Using osc-interface MidiSender with $midi-sender";
+    say "Using osc-interface MidiSender with { $midi-sender.defined ?? $midi-sender !! "remote: $config<listen_address>" }";
     my %channel-map = |(0..15).map( { "track-$_" => $_ + 1 } );
     say "Using channel map: { %channel-map.perl }";
 
