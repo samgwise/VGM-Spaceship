@@ -1,7 +1,7 @@
 #! /usr/bin/env perl6
 use v6.c;
 
-unit sub MAIN(Int :$steps = 32, Str :$scene!, Str :$record, Str :$midi-sender, Bool :$midi-sender-remote);
+unit sub MAIN(Int :$steps = 32, Str :$scene!, Str :$record, Str :$midi-sender, Bool :$midi-sender-remote, Str :$reaper-host='127.0.0.1:9000');
 use ScaleVec;
 use Math::Curves;
 use Reaper::Control;
@@ -76,7 +76,7 @@ start react whenever $out.record.Supply {
 my atomicint $is-playing = 0;
 my atomicint $game-state = 0;
 
-my $listener = reaper-listener(:host<127.0.0.1>, :port(9000));
+my $listener = reaper-listener(:host($_[0]), :port($_[1].Int)) given $reaper-host.split(':', :skip-empty);
 start react whenever $listener.reaper-events {
     when Reaper::Control::Event::Play {
       put 'Playing';
