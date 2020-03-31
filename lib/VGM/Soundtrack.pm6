@@ -176,11 +176,20 @@ our class OscSender::PD does OscSender {
 }
 
 our class OscSender::MidiSender does OscSender {
+    constant nanosecond = 1_000_000_000;
+    constant millisecond = 1_000;
     use Net::OSC::Message;
     use Net::OSC::Types;
 
     has %.channel-map is required;
     has Proc::Async $.midi-sender;
+    has Instant $!sync;
+
+    submethod TWEAK() {
+        # Trigger sync op and set internal sync time
+        $!socket.write-to($_[0], $_[1], osc-message('/midi_sender/sync').package) for @!targets;
+        $!sync = now;
+    }
 
     #! send a note message to targets
     method send-note(Str $name, Int(Cool) $note, Int(Cool) $velocity, Int(Cool) $duration, Instant :$at) {
@@ -188,9 +197,10 @@ our class OscSender::MidiSender does OscSender {
 
         # say "Sending to midi channel: %!channel-map{$name} for name $name";
 
+        my $nanosecond-at = Int( ($at.defined ?? $at - $!sync !! now - $!sync).Rat * nanosecond );
         my Net::OSC::Message $msg .= new(
             :path("/midi_sender/play")
-            :args(osc-double( $at.defined ?? ($at - now).Rat !! 0.0 ), osc-int64($duration), osc-int32(%!channel-map{$name}), $note, $velocity)
+            :args(osc-int64($nanosecond-at), osc-int64( $nanosecond-at + Int(($duration / millisecond) * nanosecond) ), osc-int32(%!channel-map{$name}), $note, $velocity)
         );
 
         $!socket.write-to($_[0], $_[1], $msg.package) for @!targets

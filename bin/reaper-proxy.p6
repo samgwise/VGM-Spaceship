@@ -6,7 +6,7 @@ sub MAIN(Str :$forward) {
     $forward-port .= Int;
 
     my $udp = IO::Socket::Async.udp;
-    react whenever IO::Socket::Async.bind-udp('127.0.0.1', 9000).supply(:bin) {
+    react whenever IO::Socket::Async.bind-udp('127.0.0.1', 9000).Supply(:bin) {
         $udp.write-to($forward-host, $forward-port, $_)
     }
 }
