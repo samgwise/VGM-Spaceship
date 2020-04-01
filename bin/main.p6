@@ -222,6 +222,11 @@ for 1..* {
                                 $out.send-note( $track, $absolute-pitch + 60, $state.dynamic-live($step), ($block-duration * (1 + $duration)) * 990);
                             }
                         }
+
+                        # Cancel notes in other tracks if still running
+                        $state.instruments{($track == 'track-5') ?? 'track-4' !! 'track-5'}.clean-up: -> $note {
+                            $out.?cancel-note( $track, $note + 60);
+                        }
                     }
 
                     if $state.combat or $step % 32 == 0|1|2|3|4|8|9|10|11|12|13 {

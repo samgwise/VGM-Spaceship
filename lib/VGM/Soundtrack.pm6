@@ -31,9 +31,12 @@ This library is free software; you can redistribute it and/or modify it under th
 
 our class Instrument {
     has %!held-notes;
+    #! Has this instrument list been cleaned since it's last use?
+    has Bool $!is-clean = False;
 
     # Add held note to storage
     method hold(Int(Cool) $note, Int $blocks) {
+        $!is-clean = False;
         %!held-notes{$note} = $blocks + (%!held-notes{$note}:exists ?? %!held-notes{$note} !! 0)
     }
 
@@ -47,6 +50,19 @@ our class Instrument {
         for %!held-notes.kv -> $note, $counter {
             %!held-notes{$note} -= $steps if $counter > 0
         }
+    }
+
+    method clean-up(&cancel) {
+        return if $!is-clean;
+
+        for %!held-notes.kv -> $note, $counter {
+            if %!held-notes{$note} != 0 {
+                %!held-notes{$note} = 0;
+                cancel($note);
+            }
+        }
+
+        $!is-clean = True;
     }
 }
 
@@ -204,6 +220,19 @@ our class OscSender::MidiSender does OscSender {
         );
 
         $!socket.write-to($_[0], $_[1], $msg.package) for @!targets
+    }
+
+    #! Extended behaviour to send a cancel message for a specific note for all targets.
+    method cancel-note(Str $name, Int(Cool) $note, Instant :$at) {
+        my $nanosecond-at = Int( ($at.defined ?? $at - $!sync !! now - $!sync).Rat * nanosecond );
+        $!socket.write-to(
+            $_[0], $_[1],
+            osc-message( '/midi_sender/cancel',
+                osc-int64($nanosecond-at),
+                osc-int32(%!channel-map{$name}),
+                $note
+            ).package,
+        ) for @!targets;
     }
 }
 
