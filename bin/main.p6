@@ -15,10 +15,13 @@ my $dissonant   = Set(1, 2, 5, 6, 10, 11);
 
 my ScaleVec $chromaitc = scalevec(0..12);
 my ScaleVec $pentatonic = scalevec(-3, -1, 2, 4, 6, 9);
-my ScaleVec $octotonic = scalevec(0, 2, 3, 5, 6, 8, 9, 11, 12);
+my ScaleVec $octatonic = scalevec(0, 2, 3, 5, 6, 8, 9, 11, 12);
 my ScaleVec $nat-minor = scalevec(0, 2, 3, 5, 7, 8, 10, 12);
+my ScaleVec $nat-minor-domminant = $nat-minor.transpose(7);
 my ScaleVec $whole-tone = scalevec(0, 2, 4, 6, 8, 10, 12);
 my ScaleVec $whole-tone-b = scalevec(-1, 1, 3, 5, 7, 9, 11);
+my ScaleVec $major = scalevec(3, 5, 7, 8, 10, 12, 14, 15);
+my ScaleVec $major-minor = scalevec(0, 2, 4, 5, 7, 8, 10, 12).transpose(-6);
 
 # chords
 # See Sountrack.pm6
@@ -128,6 +131,9 @@ for 0..8 {
 my @phrase-queue;
 my ScaleVec @phrase-chords;
 
+# Allow for queueing up of scale changes
+my ScaleVec @scale-queue;
+
 # Run loop
 my $step-delta = now;
 my $step = 0;
@@ -159,13 +165,28 @@ for 1..* {
         # manage our phrase iterations
         $phrase-counter++;
 
+        # Move to next scale if one exists
+        with @scale-queue.shift -> $new-scale {
+            $state.pitch-structure[1] = $new-scale.transpose(
+                $state.pitch-structure.head.root
+                + tonicise-scale-distance(
+                    $state,
+                    $state.pitch-structure.tail,
+                    @phrase-chords.head
+                )
+            );
+
+            say "Moved to next scale: { $state.pitch-structure[1].vector.join: ', ' }"
+        }
+
         for 0..^$steps -> $step {
             # standard step behaviour
             @phrase-queue.push: -> $state, $delta {
-                say "creating step $step for delta $delta, dynamic: { $state.dynamic }";
+                say "creating step $step for delta $delta, dynamic: { $state.dynamic }, tension: { $state.tension.value }";
                 # Update current dynamic if needed
                 $state.dynamic-update;
                 $state.instrument-update;
+                $state.accumulator-update;
 
                 # Get chord for this phrase step
                 $state.pitch-structure.pop;
@@ -186,19 +207,19 @@ for 1..* {
                     my $next-step-interval = $state.scale-interval($melody, $next-contour.tail);
 
                     # Rhythm instruments first else other calculations will disrupt timing :(
-                    if $state.combat or $combat-running {
+                    if $state.combat or ($combat-running and $state.tension.value > 0.675) {
                         # bass
-                        my $sub-division = ($state.combat and $step % 2 == 1) ?? 2 !! 1;
+                        my $sub-division = ($state.combat and $state.tension.value > 0.375 and $step % 2 == 1) ?? 2 !! 1;
                         for 0..^$sub-division {
-                            $out.send-note( 'track-0', $bass + (12 * $_) + 60, $state.dynamic-live($step), ($block-duration / $sub-division) * 800, :at( $delta + (($block-duration / $sub-division) * $_) ) );
+                            $out.send-note( 'track-0', $bass + (12 * $_) + 60, $state.dynamic-live($step) * max(0.5, $state.tension.value), ($block-duration / $sub-division) * 800, :at( $delta + (($block-duration / $sub-division) * $_) ) );
                         }
 
                         # kick
-                        $out.send-note('track-2', 36, $block-duration * 250, $state.dynamic-live($step) + 10) if $state.combat and $step % 2 == 1;
-                        $out.send-note( 'track-2', 36, $block-duration * 250, $state.dynamic-live($step)) if $state.combat and $cruise-running and ($step % 2 == 0);
+                        $out.send-note('track-2', 36, $block-duration * 250, 10 + ($state.dynamic-live($step) * max(0.5, $state.tension.value))) if $state.combat and $step % 2 == 1;
+                        $out.send-note( 'track-2', 36, $block-duration * 250, $state.dynamic-live($step)* max(0.5, $state.tension.value)) if $state.combat and $cruise-running and ($step % 2 == 0);
                     }
 
-                    if $state.cruise and $step % 4 == 0 {
+                    if $state.cruise and $state.tension.value < 0.5 and $step % 4 == 0 {
                         $out.send-note('track-6', $bass + 60 , $state.dynamic-live($step) + 10, $block-duration * 995 * 4);
                     }
 
@@ -229,7 +250,7 @@ for 1..* {
                         }
                     }
 
-                    if $state.combat or $step % 32 == 0|1|2|3|4|8|9|10|11|12|13 {
+                    if ($state.combat  or $step % 32 == 0|1|2|3|4|8|9|10|11|12|13) and !($state.cruise and $state.tension.value > 0.5) {
                         # glock melody
                         # during cruise play on the offbeat
                         my $offset = $state.cruise ?? $block-duration / 2 !! 0;
@@ -242,7 +263,7 @@ for 1..* {
                         }
                     }
 
-                    if $combat-running {
+                    if $combat-running or $state.tension.value > 0.25 {
                         # Piano chords
                         if $step % 4 == 0 {
                             $out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody).head - ($_ + 1)).head + 60, $state.dynamic-live($step), $block-duration * 500 ) for 0..3;
@@ -274,11 +295,15 @@ for 1..* {
         }
         when 0 {
             say "Updating structure for cruise";
+            @scale-queue = (); # Flush scale queue
             $previous-game-state = $_;
             $boredom-counter = 0;
             $boredom-threshold = 84 - $phrase-beats-since-change; # change about half way through repeat 3
             $state.rhythmn-structure[0] = $lento;
-            $state.pitch-structure[1] = $pentatonic.transpose($state.pitch-structure.head.root + tonicise-scale-distance($state, $state.pitch-structure.tail, @phrase-chords.head));
+            # Queue up shift to pentatonic at end of next loop
+            @scale-queue.push: $pentatonic;
+            # Transpose the current scale
+            $state.pitch-structure[1] = $state.pitch-structure[1].transpose($state.pitch-structure.head.root + tonicise-scale-distance($state, $state.pitch-structure.tail, @phrase-chords.head));
             say "Scale transposed by { $state.pitch-structure[1].root } semitones";
             $state.dynamic-target = $soft;
             $state.combat = False;
@@ -286,11 +311,14 @@ for 1..* {
         }
         when 1 {
             say "Updating structure for combat";
+            @scale-queue = (); # Flush scale queue
             $previous-game-state = $_;
             $boredom-counter = 0;
             $boredom-threshold = 84 - $phrase-beats-since-change;
             $state.rhythmn-structure[0] = $vivace;
-            $state.pitch-structure[1] = $nat-minor.transpose($state.pitch-structure.head.root + tonicise-scale-distance($state, $state.pitch-structure.tail, @phrase-chords.head));
+            # $state.pitch-structure[1] = $nat-minor.transpose($state.pitch-structure.head.root + tonicise-scale-distance($state, $state.pitch-structure.tail, @phrase-chords.head));
+            @scale-queue.push: $nat-minor;
+            $state.pitch-structure[1] = $major.transpose($state.pitch-structure.head.root + tonicise-scale-distance($state, $state.pitch-structure.tail, @phrase-chords.head));
             say "Scale transposed by { $state.pitch-structure[1].root } semitones";
             $state.dynamic-target = $loud;
             $state.combat = True;
@@ -302,8 +330,14 @@ for 1..* {
     }
 
     if ++$boredom-counter > $boredom-threshold {
-        $previous-game-state = -1; # force a change
+        #$previous-game-state = -1; # force a change
         $boredom-threshold = 64; # bring next retrigger sooner
+        if $state.combat {
+            @scale-queue.push: $nat-minor-domminant, $nat-minor;
+        }
+        else {
+            @scale-queue.push: $major-minor, $pentatonic;
+        }
         say "Change triggered from bordom counter"
     }
 

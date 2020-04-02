@@ -66,6 +66,34 @@ our class Instrument {
     }
 }
 
+our class Accumulator {
+    #! Current value of the accumulator
+    has Rat $.value = 0.0;
+    #! Optional bounds
+    has Rat $.lower-limit;
+    has Rat $.upper-limit;
+    #! Overridable mapping function
+    has &.mapping = -> $value, $input { $value + $input }
+
+    submethod TWEAK() {
+        warn "Attribute lower-limit is greater than attribute upper-limit. This accumulator will be stuck on the lower-limit!" if $!lower-limit > $!upper-limit;
+        self!limit
+    }
+
+    #! Conform current value to any provided bounds.
+    method !limit() {
+        $!value = min($!upper-limit, $!value) if $!upper-limit.defined;
+        $!value = max($!lower-limit, $!value) if $!lower-limit.defined;
+    }
+
+    #! Accumulate
+    method accumulate(Rat $in --> Rat) {
+        $!value = &!mapping($!value, $in);
+        self!limit;
+        $!value
+    }
+}
+
 our class State {
     has Numeric @.curve-upper is rw = 0, 0;
     has Numeric @.curve-lower is rw = -12, -12;
@@ -82,6 +110,11 @@ our class State {
     has @.contour-history = (0, 0);
 
     has Instrument %.instruments;
+
+    has Accumulator $.tension = Accumulator.new(
+        :lower-limit(0.0)
+        :upper-limit(1.0)
+    );
 
     # select a pair of pitch bounds from a context given a transition
     method pitch-contour($t) {
@@ -154,6 +187,16 @@ our class State {
     method instrument-update() {
         for %!instruments.values {
             .update-held
+        }
+    }
+
+    #! Update accumulator values
+    method accumulator-update() {
+        if $!combat {
+            $!tension.accumulate(1/64)
+        }
+        else {
+            $!tension.accumulate(-(1/64))
         }
     }
 }
@@ -303,13 +346,13 @@ our sub drum-pattern($step, $duration, $state) is export {
         when $_ mod 4 == 1 {
             # snare
             take (38, $duration, $state.dynamic-live($step), 0);
-            # # hi-hat open
+            # hi-hat open
             # take (46, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
         }
         when $_ mod 2 == 0 {
             # snare
             take (36, $duration, $state.dynamic-live($step), ($duration / 4) * 3);
-            # # hi-hat open
+            # hi-hat open
             # take (46, $duration / 4, $state.dynamic-live($step), ($duration / 4) * 2 );
             # kick
             take (36, $duration / 4, $state.dynamic-live($step), 0);
@@ -334,7 +377,7 @@ my ScaleVec $supertonic     = scalevec 1, 3, 5, 8;
 my ScaleVec $medient        = scalevec 2, 4, 6, 9;
 my ScaleVec $dominant       = scalevec 4, 6, 8, 11;
 my ScaleVec $dominant-sus4  = scalevec 4, 7, 8, 11;
-my ScaleVec $dominant-sus2  = scalevec 4, 6, 8, 11, 12;
+my ScaleVec $dominant-sus2  = scalevec 4, 5, 6, 8, 11;
 my ScaleVec $dominant7th    = scalevec 4, 6, 8, 10, 11;
 my ScaleVec $subtonic       = scalevec -1, 1, 3, 6;
 
