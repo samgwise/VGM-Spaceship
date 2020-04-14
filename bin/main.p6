@@ -245,7 +245,7 @@ for 1..* {
                         }
 
                         # Cancel notes in other tracks if still running
-                        $state.instruments{($track == 'track-5') ?? 'track-4' !! 'track-5'}.clean-up: -> $note {
+                        $state.instruments{($track eq 'track-5') ?? 'track-4' !! 'track-5'}.clean-up: -> $note {
                             $out.?cancel-note( $track, $note + 60);
                         }
                     }
@@ -257,22 +257,32 @@ for 1..* {
                         for 0..$next-step-interval -> $passing-note {
                             my $note = .map-onto-scale(.map-into-scale($melody).head + $passing-note).sum given $state;
                             # Do not repeat notes during combat
-                            next if $state.combat and $note == $state.contour-history[1].tail;
+                            next if !($step % 4 == 0) and $state.combat and $note == $state.contour-history[1].tail;
 
-                            $out.send-note( 'track-3', ($note + 60).Int, (max 60, $state.dynamic-live($step) + 10), (($block-duration / max 1, $next-step-interval) * 990).Int, :at( $delta + $offset + (($block-duration / max 1, $next-step-interval) * $passing-note) ) );
+                            if $state.combat and $note == $state.contour-history[1].tail {
+                                my Numeric $alt-note = $state.map-onto-pitch( $state.map-into-pitch($note).head + 1 ).head;
+                                say "Alt-note: $alt-note";
+                                $out.send-note( 'track-3', ($alt-note + 60).Int, (max 60, $state.dynamic-live($step) + 10), (($block-duration / max 1, $next-step-interval) * 990).Int, :at( $delta + $offset + (($block-duration / max 1, $next-step-interval) * $passing-note) ) );
+                            }
+                            else {
+                                $out.send-note( 'track-3', ($note + 60).Int, (max 60, $state.dynamic-live($step) + 10), (($block-duration / max 1, $next-step-interval) * 990).Int, :at( $delta + $offset + (($block-duration / max 1, $next-step-interval) * $passing-note) ) );
+                            }
                         }
                     }
 
                     if $combat-running or $state.tension.value > 0.25 {
                         # Piano chords
                         if $step % 4 == 0 {
-                            $out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody).head - ($_ + 1)).head + 60, $state.dynamic-live($step), $block-duration * 500 ) for 0..3;
+                            $out.send-note( 'track-1', $_ + 60, $state.dynamic-live($step), $block-duration * 500 ) for $state.make-piano-chord($melody, 3);
+                            # $out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody).head - ($_ + 1)).head + 60, $state.dynamic-live($step), $block-duration * 500 ) for 0..3;
                         }
                         elsif $step % 2 == 0 and $state.cruise {
-                            $out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody + 12).head - (($_ + 1) * 2)).head + 60, $state.dynamic-live($step), $block-duration * 500 ) for 0..3;
+                            $out.send-note( 'track-1', $_ + 60, $state.dynamic-live($step), $block-duration * 500 ) for $state.make-piano-chord($melody, 3);
+                            #$out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody + 12).head - (($_ + 1) * 2)).head + 60, $state.dynamic-live($step), $block-duration * 500 ) for 0..3;
                         }
 
                         if $step % 3 == 0 and $state.combat {
+                            #$out.send-note( 'track-1', $_ + 60, $state.dynamic-live($step), $block-duration * 500 ) for $state.make-piano-chord($melody, 3);
                             $out.send-note( 'track-1', $state.map-onto-pitch($state.map-into-pitch($melody + 12).head - $_).head + 60, $state.dynamic-live($step), $block-duration * 250, :at($delta + (($block-duration / 4) * 2)) ) for 0..3;
                         }
                     }

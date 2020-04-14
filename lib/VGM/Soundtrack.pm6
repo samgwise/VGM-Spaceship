@@ -199,6 +199,21 @@ our class State {
             $!tension.accumulate(-(1/64))
         }
     }
+
+    #! Arrange a piano chord
+    method make-piano-chord(Numeric $melody, Int $voices --> List) {
+        my @notes;
+        for 0..$voices {
+            given self.map-onto-pitch(self.map-into-pitch($melody).head - ($_ + 1)).head {
+                when @notes.map( -> $note { ($note - $_) % 12 } ).grep( { $_ == 0|1|2|5|11 } ).elems > 0 {
+                    next
+                }
+                default { @notes.push: $_ }
+            }
+        }
+
+        @notes.List
+    }
 }
 
 our role OscSender {
