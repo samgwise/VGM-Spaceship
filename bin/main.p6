@@ -211,7 +211,11 @@ for 1..* {
                         # bass
                         my $sub-division = ($state.combat and $state.tension.value > 0.375 and $step % 2 == 1) ?? 2 !! 1;
                         for 0..^$sub-division {
-                            $out.send-note( 'track-0', $bass + (12 * $_) + 60, $state.dynamic-live($step) * max(0.5, $state.tension.value), ($block-duration / $sub-division) * 800, :at( $delta + (($block-duration / $sub-division) * $_) ) );
+                            my $pitch = ($step.Int mod 4 == 0)
+                                ?? $bass - ($bass.Int mod $state.pitch-structure.tail.repeat-interval) + ( 60 + 12 )
+                                !! $bass + (12 * $_) + 60;
+
+                            $out.send-note( 'track-0', $pitch, $state.dynamic-live($step) * max(0.5, $state.tension.value), ($block-duration / $sub-division) * 800, :at( $delta + (($block-duration / $sub-division) * $_) ) );
                         }
 
                         # kick

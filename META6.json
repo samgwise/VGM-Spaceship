@@ -8,8 +8,7 @@
     "Math::Curves",
     "Reaper::Control",
     "JSON::Fast",
-    "Config::TOML",
-    "Net::OSC:ver<0.2.4+>"
+    "Config::TOML"
   ],
   "description": "blah blah blah",
   "license": "Artistic-2.0",
